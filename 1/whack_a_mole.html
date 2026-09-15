@@ -141,7 +141,42 @@
         }
 
         .mole-emoji {
+            position: relative;
+            width: 72%;
+            height: 78%;
+            border-radius: 50% 50% 45% 45%;
+            background:
+                radial-gradient(circle at 35% 38%, #211a12 0 4%, transparent 5%),
+                radial-gradient(circle at 65% 38%, #211a12 0 4%, transparent 5%),
+                #bd8c3d;
+            border: 3px solid #8b642a;
             filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.5));
+        }
+
+        .mole-emoji::before {
+            content: '';
+            position: absolute;
+            z-index: -1;
+            top: -10%;
+            left: 4%;
+            width: 32%;
+            aspect-ratio: 1;
+            border-radius: 50%;
+            background: #bd8c3d;
+            border: 3px solid #8b642a;
+            box-shadow: 180% 0 0 -3px #bd8c3d, 180% 0 0 0 #8b642a;
+        }
+
+        .mole-emoji::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            bottom: 22%;
+            width: 16%;
+            aspect-ratio: 1;
+            border-radius: 50%;
+            background: #4f2c1b;
+            transform: translateX(-50%);
         }
 
         .controls {
@@ -388,47 +423,47 @@
         <div class="game-board" id="gameBoard">
             <div class="hole" data-index="0">
                 <div class="mole">
-                    <span class="mole-emoji">🦡</span>
+                    <span class="mole-emoji"></span>
                 </div>
             </div>
             <div class="hole" data-index="1">
                 <div class="mole">
-                    <span class="mole-emoji">🦡</span>
+                    <span class="mole-emoji"></span>
                 </div>
             </div>
             <div class="hole" data-index="2">
                 <div class="mole">
-                    <span class="mole-emoji">🦡</span>
+                    <span class="mole-emoji"></span>
                 </div>
             </div>
             <div class="hole" data-index="3">
                 <div class="mole">
-                    <span class="mole-emoji">🦡</span>
+                    <span class="mole-emoji"></span>
                 </div>
             </div>
             <div class="hole" data-index="4">
                 <div class="mole">
-                    <span class="mole-emoji">🦡</span>
+                    <span class="mole-emoji"></span>
                 </div>
             </div>
             <div class="hole" data-index="5">
                 <div class="mole">
-                    <span class="mole-emoji">🦡</span>
+                    <span class="mole-emoji"></span>
                 </div>
             </div>
             <div class="hole" data-index="6">
                 <div class="mole">
-                    <span class="mole-emoji">🦡</span>
+                    <span class="mole-emoji"></span>
                 </div>
             </div>
             <div class="hole" data-index="7">
                 <div class="mole">
-                    <span class="mole-emoji">🦡</span>
+                    <span class="mole-emoji"></span>
                 </div>
             </div>
             <div class="hole" data-index="8">
                 <div class="mole">
-                    <span class="mole-emoji">🦡</span>
+                    <span class="mole-emoji"></span>
                 </div>
             </div>
         </div>
@@ -464,6 +499,8 @@
                 this.timeLeft = 30;
                 this.gameActive = false;
                 this.timerInterval = null;
+                this.moleAppearanceTimer = null;
+                this.moleHideTimer = null;
                 this.currentMole = null;
                 this.difficulty = 'easy';
                 this.moleShowDuration = 1000; // ms
@@ -549,9 +586,11 @@
             }
 
             startMoleAppearance() {
-                const appeaMoleInterval = setInterval(() => {
+                clearInterval(this.moleAppearanceTimer);
+                this.moleAppearanceTimer = setInterval(() => {
                     if (!this.gameActive) {
-                        clearInterval(appeaMoleInterval);
+                        clearInterval(this.moleAppearanceTimer);
+                        this.moleAppearanceTimer = null;
                         return;
                     }
                     this.showRandomMole();
@@ -560,6 +599,8 @@
 
             showRandomMole() {
                 if (!this.gameActive) return;
+
+                clearTimeout(this.moleHideTimer);
 
                 // 隱藏前一個地鼠
                 if (this.currentMole) {
@@ -570,12 +611,15 @@
                 const randomIndex = Math.floor(Math.random() * this.holes.length);
                 this.currentMole = this.holes[randomIndex];
                 this.currentMole.classList.add('active');
+                const mole = this.currentMole;
 
                 // 一段時間後隱藏
-                setTimeout(() => {
-                    if (this.currentMole) {
-                        this.currentMole.classList.remove('active');
+                this.moleHideTimer = setTimeout(() => {
+                    if (this.currentMole === mole) {
+                        mole.classList.remove('active');
+                        this.currentMole = null;
                     }
+                    this.moleHideTimer = null;
                 }, this.moleShowDuration);
             }
 
@@ -596,6 +640,10 @@
             endGame() {
                 this.gameActive = false;
                 clearInterval(this.timerInterval);
+                clearInterval(this.moleAppearanceTimer);
+                clearTimeout(this.moleHideTimer);
+                this.moleAppearanceTimer = null;
+                this.moleHideTimer = null;
                 this.startBtn.disabled = false;
                 this.difficultyBtns.forEach(btn => btn.disabled = false);
 
@@ -614,6 +662,10 @@
                 this.currentMole = null;
 
                 clearInterval(this.timerInterval);
+                clearInterval(this.moleAppearanceTimer);
+                clearTimeout(this.moleHideTimer);
+                this.moleAppearanceTimer = null;
+                this.moleHideTimer = null;
 
                 this.scoreDisplay.textContent = '0';
                 this.timerDisplay.textContent = '30';
