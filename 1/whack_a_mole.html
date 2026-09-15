@@ -430,7 +430,7 @@
             </div>
             <div class="stat-box">
                 <div class="stat-label">剩餘時間</div>
-                <div class="stat-value" id="timer">30</div>
+                <div class="stat-value" id="timer">60</div>
             </div>
         </div>
 
@@ -489,7 +489,7 @@
 
         <div class="instructions">
             <strong>遊戲規則：</strong><br>
-            • 點擊「開始遊戲」開始倒數 30 秒<br>
+            • 點擊「開始遊戲」開始倒數 60 秒<br>
             • 地鼠隨機出現在各個地洞中<br>
             • 快速點擊地鼠來獲得分數<br>
             • 每個地鼠只能點擊一次<br>
@@ -510,7 +510,7 @@
         class WhackAMoleGame {
             constructor() {
                 this.score = 0;
-                this.timeLeft = 30;
+                this.timeLeft = 60;
                 this.gameActive = false;
                 this.timerInterval = null;
                 this.moleAppearanceTimer = null;
@@ -671,7 +671,7 @@
 
             reset() {
                 this.score = 0;
-                this.timeLeft = 30;
+                this.timeLeft = 60;
                 this.gameActive = false;
                 this.currentMole = null;
 
@@ -682,7 +682,7 @@
                 this.moleHideTimer = null;
 
                 this.scoreDisplay.textContent = '0';
-                this.timerDisplay.textContent = '30';
+                this.timerDisplay.textContent = '60';
                 this.holes.forEach(hole => hole.classList.remove('active'));
                 this.gameOverModal.classList.remove('show');
                 this.startBtn.disabled = false;
