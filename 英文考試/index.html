@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>英文單字測驗</title>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --panel: #ffffff;
+      --primary: #2f6fed;
+      --primary-dark: #214fb8;
+      --accent: #ffb703;
+      --text: #1d2433;
+      --muted: #64748b;
+      --border: #dfe7f3;
+      --success: #2eb67d;
+      --danger: #e74c3c;
+      --shadow: 0 18px 45px rgba(31, 41, 55, 0.12);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: linear-gradient(180deg, #eef5ff 0%, var(--bg) 100%);
+      font-family: "Segoe UI", "Microsoft JhengHei", sans-serif;
+      color: var(--text);
+    }
+
+    .page {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 32px 20px 60px;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px;
+      margin-bottom: 20px;
+      position: relative;
+    }
+
+    .title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .title-wrap h1 {
+      margin: 0;
+      font-size: clamp(1.8rem, 2vw, 2.5rem);
+      letter-spacing: 0.04em;
+    }
+
+    .badge {
+      background: #e8f1ff;
+      color: var(--primary);
+      border: 1px solid #cfe0ff;
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-weight: 700;
+      font-size: 0.82rem;
+    }
+
+    .exam-author {
+      position: absolute;
+      right: 0;
+      top: 0;
+      font-weight: 700;
+      color: var(--muted);
+      background: rgba(255,255,255,0.85);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 14px;
+      box-shadow: var(--shadow);
+    }
+
+    .exam-box {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      box-shadow: var(--shadow);
+      padding: 26px 24px 18px;
+    }
+
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 22px;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      font-size: 0.98rem;
+    }
+
+    .meta span {
+      background: #f7f9fd;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 12px;
+      font-weight: 600;
+      color: var(--muted);
+    }
+
+    .countdown {
+      min-width: 130px;
+      text-align: center;
+      background: #fff4d5;
+      border: 1px solid #f0d98a;
+      color: #8a5d00;
+      border-radius: 12px;
+      font-weight: 800;
+      padding: 10px 12px;
+    }
+
+    .quiz-card {
+      display: none;
+      padding-top: 10px;
+    }
+
+    .quiz-card.active {
+      display: block;
+    }
+
+    .question-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .question-number {
+      font-size: 1rem;
+      font-weight: 800;
+      color: var(--primary);
+      background: #edf3ff;
+      border: 1px solid #cfe0ff;
+      border-radius: 999px;
+      padding: 9px 14px;
+    }
+
+    .score-pill {
+      font-weight: 700;
+      color: var(--success);
+      background: #ecfff6;
+      border: 1px solid #bfeed3;
+      border-radius: 999px;
+      padding: 9px 14px;
+    }
+
+    .prompt {
+      font-size: clamp(1.5rem, 2vw, 2.2rem);
+      font-weight: 800;
+      margin: 20px 0 22px;
+      line-height: 1.5;
+      color: var(--text);
+    }
+
+    .options {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(200px, 1fr));
+      gap: 14px;
+      margin-top: 12px;
+    }
+
+    .option {
+      appearance: none;
+      border: 1px solid var(--border);
+      background: #f9fbff;
+      border-radius: 16px;
+      padding: 18px 16px;
+      font-size: 1.05rem;
+      text-align: left;
+      cursor: pointer;
+      color: var(--text);
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+
+    .option:hover {
+      border-color: #b7caf8;
+      background: #edf3ff;
+      transform: translateY(-1px);
+    }
+
+    .option.selected {
+      border-color: var(--primary);
+      background: #edf3ff;
+      box-shadow: inset 0 0 0 1px var(--primary);
+    }
+
+    .option.correct {
+      background: #e9fff4;
+      border-color: var(--success);
+      color: #166d45;
+    }
+
+    .option.wrong {
+      background: #fff1f1;
+      border-color: var(--danger);
+      color: #9b1e1e;
+    }
+
+    .nav-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 24px;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      border: none;
+      border-radius: 14px;
+      padding: 12px 20px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.15s ease, opacity 0.15s ease;
+      font-family: inherit;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-dark);
+    }
+
+    .btn-secondary {
+      background: #eef3ff;
+      color: var(--primary);
+      border: 1px solid #dfe9ff;
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .start-panel {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 300px;
+      text-align: center;
+      gap: 18px;
+      padding: 26px 16px;
+    }
+
+    .start-panel h2 {
+      margin: 0;
+      font-size: clamp(1.8rem, 2vw, 2.4rem);
+    }
+
+    .start-panel p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.7;
+      max-width: 620px;
+    }
+
+    .result-panel {
+      display: none;
+      text-align: center;
+      padding: 28px 12px 14px;
+    }
+
+    .result-panel.active {
+      display: block;
+    }
+
+    .result-score {
+      font-size: clamp(2.2rem, 4vw, 3.4rem);
+      font-weight: 900;
+      color: var(--primary);
+      margin: 12px 0 6px;
+    }
+
+    .result-summary {
+      color: var(--muted);
+      font-size: 1.05rem;
+      margin-bottom: 18px;
+    }
+
+    .status-box {
+      margin-top: 12px;
+      background: #f8fbff;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px 16px;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    @media (max-width: 720px) {
+      .topbar {
+        justify-content: center;
+      }
+
+      .exam-author {
+        position: static;
+        margin-top: 10px;
+      }
+
+      .options {
+        grid-template-columns: 1fr;
+      }
+
+      .nav-row {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .nav-row .btn {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="topbar">
+      <div class="title-wrap">
+        <h1>英文單字測驗</h1>
+        <span class="badge">20 題 × 5 分</span>
+      </div>
+      <div class="exam-author">出題者：林霆宇</div>
+    </div>
+
+    <div class="exam-box">
+      <div class="info-row">
+        <div class="meta">
+          <span>總分：100 分</span>
+          <span>測驗時間：15 分鐘</span>
+          <span>題目數：20</span>
+        </div>
+        <div id="countdown" class="countdown">15:00</div>
+      </div>
+
+      <div id="startPanel" class="start-panel">
+        <h2>開始測驗</h2>
+        <p>
+          本測驗將隨機抽取 20 個單字，採用選擇題形式，
+          每題 5 分，總分 100 分。請在 15 分鐘內完成所有題目。
+        </p>
+        <button id="startBtn" class="btn btn-primary" type="button">開始作答</button>
+      </div>
+
+      <div id="quizPanel" class="quiz-card" aria-live="polite">
+        <div class="question-header">
+          <div id="questionNumber" class="question-number">第 1 題</div>
+          <div id="scorePill" class="score-pill">目前分數：0</div>
+        </div>
+
+        <div id="questionPrompt" class="prompt">載入題目中...</div>
+        <div id="options" class="options"></div>
+
+        <div class="nav-row">
+          <button id="prevBtn" class="btn btn-secondary" type="button" disabled>上一題</button>
+          <button id="nextBtn" class="btn btn-primary" type="button">下一題</button>
+        </div>
+      </div>
+
+      <div id="resultPanel" class="result-panel">
+        <div class="badge">測驗結束</div>
+        <div id="finalScore" class="result-score">0</div>
+        <div id="resultSummary" class="result-summary">本次成績</div>
+        <div class="status-box" id="statusBox"></div>
+        <div style="margin-top: 20px;">
+          <button id="restartBtn" class="btn btn-primary" type="button">重新測驗</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const SHEET_URL = "https://docs.google.com/spreadsheets/d/1ec9D4qWgpfT0LDfGhM-Ma3FwLAkZcHrJduxQ_d5nVmM/export?format=csv&gid=121503162";
+    const TOTAL_QUESTIONS = 20;
+    const QUESTION_SCORE = 5;
+    const TEST_MINUTES = 15;
+
+    const startPanel = document.getElementById("startPanel");
+    const quizPanel = document.getElementById("quizPanel");
+    const resultPanel = document.getElementById("resultPanel");
+    const startBtn = document.getElementById("startBtn");
+    const nextBtn = document.getElementById("nextBtn");
+    const prevBtn = document.getElementById("prevBtn");
+    const restartBtn = document.getElementById("restartBtn");
+    const countdownEl = document.getElementById("countdown");
+    const questionNumberEl = document.getElementById("questionNumber");
+    const questionPromptEl = document.getElementById("questionPrompt");
+    const optionsEl = document.getElementById("options");
+    const scorePillEl = document.getElementById("scorePill");
+    const finalScoreEl = document.getElementById("finalScore");
+    const resultSummaryEl = document.getElementById("resultSummary");
+    const statusBoxEl = document.getElementById("statusBox");
+
+    let allWordEntries = [];
+    let selectedQuestions = [];
+    let currentIndex = 0;
+    let score = 0;
+    let timeLeft = TEST_MINUTES * 60;
+    let timerId = null;
+    let answered = [];
+    let quizStarted = false;
+
+    startBtn.addEventListener("click", startQuiz);
+    nextBtn.addEventListener("click", () => goToQuestion(currentIndex + 1));
+    prevBtn.addEventListener("click", () => goToQuestion(currentIndex - 1));
+    restartBtn.addEventListener("click", resetQuiz);
+
+    async function initializeQuiz() {
+      try {
+        const response = await fetch(SHEET_URL, { cache: "no-store" });
+        if (!response.ok) throw new Error("fetch failed");
+
+        const csvText = await response.text();
+        const entries = parseGoogleSheet(csvText);
+        const validWordEntries = entries.filter(Boolean);
+
+        if (validWordEntries.length >= 20) {
+          allWordEntries = validWordEntries;
+          return;
+        }
+      } catch (error) {
+        console.warn("Google Sheet fetch failed, using fallback sample words.", error);
+      }
+
+      allWordEntries = getFallbackWordEntries();
+    }
+
+    function startQuiz() {
+      if (!allWordEntries.length) {
+        alert("尚未載入單字資料，請稍後再試。")
+        return;
+      }
+
+      quizStarted = true;
+      score = 0;
+      currentIndex = 0;
+      answered = new Array(TOTAL_QUESTIONS).fill(null);
+
+      const words = shuffle([...allWordEntries]);
+      selectedQuestions = words.slice(0, TOTAL_QUESTIONS).map((entry, index) => buildQuestion(entry, index));
+
+      startPanel.style.display = "none";
+      quizPanel.classList.add("active");
+      resultPanel.classList.remove("active");
+      nextBtn.disabled = false;
+
+      startTimer();
+      renderCurrentQuestion();
+    }
+
+    function resetQuiz() {
+      clearInterval(timerId);
+      timeLeft = TEST_MINUTES * 60;
+      countdownEl.textContent = formatTime(timeLeft);
+      score = 0;
+      currentIndex = 0;
+      answered = [];
+      selectedQuestions = [];
+      quizStarted = false;
+
+      resultPanel.classList.remove("active");
+      quizPanel.classList.remove("active");
+      startPanel.style.display = "flex";
+      scorePillEl.textContent = "目前分數：0";
+      questionPromptEl.textContent = "載入題目中...";
+      optionsEl.innerHTML = "";
+      nextBtn.disabled = true;
+      prevBtn.disabled = true;
+    }
+
+    function startTimer() {
+      clearInterval(timerId);
+      timerId = setInterval(() => {
+        timeLeft -= 1;
+        countdownEl.textContent = formatTime(timeLeft);
+
+        if (timeLeft <= 0) {
+          clearInterval(timerId);
+          finishQuiz();
+        }
+      }, 1000);
+    }
+
+    function formatTime(totalSeconds) {
+      const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, "0");
+      const seconds = String(totalSeconds % 60).padStart(2, "0");
+      return `${minutes}:${seconds}`;
+    }
+
+    function buildQuestion(entry, index) {
+      const answers = shuffle([
+        entry.word,
+        ...shuffle([...allWordEntries.filter(item => item.word !== entry.word)].map(item => item.word)).slice(0, 3)
+      ]);
+
+      const promptText = entry.meaning ? `請選出下列哪一個英文單字的中文意思是：${entry.meaning}` : `請選出正確的英文單字：${entry.word}`;
+
+      return {
+        id: index,
+        correctAnswer: entry.word,
+        promptText,
+        options: answers,
+        selectedAnswer: null,
+      };
+    }
+
+    function renderCurrentQuestion() {
+      const question = selectedQuestions[currentIndex];
+      if (!question) return;
+
+      questionNumberEl.textContent = `第 ${currentIndex + 1} 題`;
+      scorePillEl.textContent = `目前分數：${score}`;
+      questionPromptEl.textContent = question.promptText;
+      optionsEl.innerHTML = "";
+
+      question.options.forEach((optionValue) => {
+        const optionBtn = document.createElement("button");
+        optionBtn.type = "button";
+        optionBtn.className = "option";
+        optionBtn.textContent = optionValue;
+
+        const selected = question.selectedAnswer === optionValue;
+        if (selected) optionBtn.classList.add("selected");
+
+        optionBtn.addEventListener("click", () => chooseAnswer(optionValue));
+        optionsEl.appendChild(optionBtn);
+      });
+
+      prevBtn.disabled = currentIndex === 0;
+      nextBtn.disabled = false;
+      nextBtn.textContent = currentIndex === selectedQuestions.length - 1 ? "完成作答" : "下一題";
+    }
+
+    function chooseAnswer(optionValue) {
+      const question = selectedQuestions[currentIndex];
+      if (!question || question.selectedAnswer) return;
+
+      question.selectedAnswer = optionValue;
+      const buttons = [...optionsEl.querySelectorAll(".option")];
+
+      buttons.forEach((btn) => {
+        const text = btn.textContent;
+        const isCorrect = text === question.correctAnswer;
+        const isSelected = text === optionValue;
+
+        btn.classList.remove("selected");
+        if (isCorrect) {
+          btn.classList.add("correct");
+        } else if (isSelected) {
+          btn.classList.add("wrong");
+        }
+      });
+
+      if (optionValue === question.correctAnswer) {
+        score += QUESTION_SCORE;
+      }
+
+      scorePillEl.textContent = `目前分數：${score}`;
+      answered[currentIndex] = optionValue === question.correctAnswer;
+
+      setTimeout(() => {
+        if (currentIndex < selectedQuestions.length - 1) {
+          goToQuestion(currentIndex + 1);
+        } else {
+          finishQuiz();
+        }
+      }, 500);
+    }
+
+    function goToQuestion(index) {
+      if (index < 0 || index >= selectedQuestions.length) return;
+      currentIndex = index;
+      renderCurrentQuestion();
+    }
+
+    function finishQuiz() {
+      clearInterval(timerId);
+      quizPanel.classList.remove("active");
+      resultPanel.classList.add("active");
+
+      const correctCount = answered.filter(Boolean).length;
+      finalScoreEl.textContent = `${score}`;
+      resultSummaryEl.textContent = `共答對 ${correctCount} 題，總分 ${score} / 100`;
+
+      const message = score >= 80
+        ? "表現優秀！繼續保持。"
+        : score >= 60
+          ? "表現不錯，仍可再加強。"
+          : score >= 40
+            ? "已經有進步空間，請再多練習。"
+            : "請再努力複習，別氣餒！";
+
+      statusBoxEl.innerHTML = `本次結果：<strong>${correctCount}/${TOTAL_QUESTIONS}</strong> 題正確。<br>${message}`;
+      nextBtn.disabled = true;
+      prevBtn.disabled = true;
+    }
+
+    function parseGoogleSheet(csvText) {
+      const rows = parseCSV(csvText);
+      const valid = [];
+
+      rows.forEach((row) => {
+        if (!row || row.length === 0) return;
+
+        const cells = row
+          .map((cell) => cell.trim())
+          .filter((cell) => cell && cell !== "" && cell !== "-");
+
+        if (cells.length < 2) {
+          const singleCell = cells[0];
+          if (singleCell && /^[A-Za-z][A-Za-z' -]*$/.test(singleCell)) {
+            valid.push({ word: singleCell, meaning: "" });
+          }
+          return;
+        }
+
+        let wordCell = null;
+        let meaningCell = null;
+
+        for (let i = 0; i < cells.length; i++) {
+          const cell = cells[i];
+          if (!wordCell && /^[A-Za-z][A-Za-z' -]*$/.test(cell) && cell.length <= 30) {
+            wordCell = cell;
+          } else if (!meaningCell && /[\u4e00-\u9fff]/.test(cell)) {
+            meaningCell = cell;
+          }
+        }
+
+        if (!wordCell) {
+          wordCell = cells[0];
+        }
+
+        if (!meaningCell) {
+          meaningCell = cells.find((cell) => cell !== wordCell && /[A-Za-z]/.test(cell) === false) || "";
+        }
+
+        const cleanWord = wordCell.replace(/\s+/g, " ").trim();
+        if (!cleanWord || cleanWord.length < 2 || cleanWord.length > 30) return;
+
+        valid.push({
+          word: cleanWord,
+          meaning: meaningCell ? meaningCell.replace(/\s+/g, " ").trim() : ""
+        });
+      });
+
+      const unique = [];
+      const seen = new Set();
+      valid.forEach((item) => {
+        const key = item.word.toLowerCase();
+        if (!seen.has(key)) {
+          seen.add(key);
+          unique.push(item);
+        }
+      });
+
+      return unique;
+    }
+
+    function parseCSV(text) {
+      const rows = [];
+      let row = [];
+      let value = "";
+      let inQuotes = false;
+
+      for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        const next = text[i + 1];
+
+        if (char === '"') {
+          if (inQuotes && next === '"') {
+            value += '"';
+            i++;
+          } else {
+            inQuotes = !inQuotes;
+          }
+        } else if (char === ',' && !inQuotes) {
+          row.push(value);
+          value = "";
+        } else if ((char === '\n' || char === '\r') && !inQuotes) {
+          if (char === '\r' && next === '\n') i++;
+          row.push(value);
+          if (row.some((cell) => cell.trim() !== "")) rows.push(row);
+          row = [];
+          value = "";
+        } else {
+          value += char;
+        }
+      }
+
+      if (value.length > 0 || row.length > 0) {
+        row.push(value);
+        if (row.some((cell) => cell.trim() !== "")) rows.push(row);
+      }
+
+      return rows;
+    }
+
+    function getFallbackWordEntries() {
+      return [
+        { word: "abandon", meaning: "放棄" },
+        { word: "ability", meaning: "能力" },
+        { word: "absolute", meaning: "絕對的" },
+        { word: "academy", meaning: "學院" },
+        { word: "accept", meaning: "接受" },
+        { word: "access", meaning: "存取、入口" },
+        { word: "account", meaning: "帳戶" },
+        { word: "achievement", meaning: "成就" },
+        { word: "adapt", meaning: "適應" },
+        { word: "address", meaning: "地址" },
+        { word: "advance", meaning: "推進" },
+        { word: "adventure", meaning: "冒險" },
+        { word: "affect", meaning: "影響" },
+        { word: "afraid", meaning: "害怕的" },
+        { word: "agency", meaning: "代理機構" },
+        { word: "agree", meaning: "同意" },
+        { word: "allow", meaning: "允許" },
+        { word: "amazing", meaning: "驚人的" },
+        { word: "amount", meaning: "金額、總量" },
+        { word: "analysis", meaning: "分析" },
+        { word: "announce", meaning: "宣布" },
+        { word: "apology", meaning: "道歉" },
+        { word: "appeal", meaning: "吸引力" },
+        { word: "approach", meaning: "方法、接近" },
+        { word: "argue", meaning: "爭論" },
+        { word: "arrive", meaning: "到達" },
+        { word: "article", meaning: "文章" },
+        { word: "assess", meaning: "評估" },
+        { word: "assist", meaning: "協助" },
+        { word: "attempt", meaning: "嘗試" },
+        { word: "attention", meaning: "注意" },
+        { word: "balance", meaning: "平衡" },
+        { word: "beauty", meaning: "美麗" },
+        { word: "benefit", meaning: "益處" },
+        { word: "beyond", meaning: "超過" },
+        { word: "borrow", meaning: "借" },
+        { word: "brave", meaning: "勇敢的" },
+        { word: "brief", meaning: "簡短的" },
+        { word: "budget", meaning: "預算" },
+        { word: "calm", meaning: "平靜的" },
+        { word: "career", meaning: "職業" },
+        { word: "cause", meaning: "原因" },
+        { word: "celebrate", meaning: "慶祝" },
+        { word: "center", meaning: "中心" },
+        { word: "challenge", meaning: "挑戰" },
+        { word: "channel", meaning: "頻道" },
+        { word: "charity", meaning: "慈善" },
+        { word: "choice", meaning: "選擇" },
+        { word: "citizen", meaning: "公民" },
+        { word: "clarify", meaning: "澄清" },
+        { word: "classical", meaning: "古典的" },
+        { word: "client", meaning: "客戶" },
+        { word: "collect", meaning: "收集" },
+        { word: "combine", meaning: "結合" },
+        { word: "comfort", meaning: "舒適" },
+        { word: "comment", meaning: "評論" },
+        { word: "commit", meaning: "承諾、犯下" },
+        { word: "common", meaning: "共同的" },
+        { word: "compare", meaning: "比較" },
+        { word: "compete", meaning: "競爭" },
+        { word: "complex", meaning: "複雜的" },
+        { word: "concern", meaning: "關心" },
+        { word: "confident", meaning: "自信的" },
+        { word: "consider", meaning: "考慮" },
+        { word: "constant", meaning: "持續的" },
+        { word: "construct", meaning: "建造" },
+        { word: "contact", meaning: "聯絡" },
+        { word: "content", meaning: "內容" },
+        { word: "continue", meaning: "繼續" },
+        { word: "control", meaning: "控制" },
+        { word: "convince", meaning: "說服" },
+        { word: "correct", meaning: "正確的" },
+        { word: "create", meaning: "創造" },
+        { word: "credit", meaning: "信用、學分" },
+        { word: "culture", meaning: "文化" },
+        { word: "danger", meaning: "危險" },
+        { word: "debate", meaning: "辯論" },
+        { word: "decide", meaning: "決定" },
+        { word: "defend", meaning: "防守、辯護" },
+        { word: "degree", meaning: "程度" },
+        { word: "deliver", meaning: "交付" },
+        { word: "demand", meaning: "需求" },
+        { word: "describe", meaning: "描述" },
+        { word: "design", meaning: "設計" },
+        { word: "detail", meaning: "細節" },
+        { word: "develop", meaning: "發展" },
+        { word: "differ", meaning: "不同" },
+        { word: "disease", meaning: "疾病" },
+        { word: "discover", meaning: "發現" },
+        { word: "discuss", meaning: "討論" },
+        { word: "effect", meaning: "效果" },
+        { word: "effort", meaning: "努力" },
+        { word: "election", meaning: "選舉" },
+        { word: "element", meaning: "元素" },
+        { word: "emotion", meaning: "情緒" },
+        { word: "encourage", meaning: "鼓勵" },
+        { word: "energy", meaning: "精力" },
+        { word: "enjoy", meaning: "享受" },
+        { word: "entire", meaning: "整個" },
+        { word: "equal", meaning: "相等的" },
+        { word: "escape", meaning: "逃脫" },
+        { word: "estate", meaning: "產業、房地產" },
+        { word: "estimate", meaning: "估計" },
+        { word: "ethical", meaning: "倫理的" },
+        { word: "event", meaning: "事件" },
+        { word: "evidence", meaning: "證據" },
+        { word: "examine", meaning: "檢查" },
+        { word: "example", meaning: "例子" },
+        { word: "excite", meaning: "使興奮" },
+        { word: "expand", meaning: "擴張" },
+        { word: "expect", meaning: "期待" },
+        { word: "expense", meaning: "費用" },
+        { word: "expert", meaning: "專家" },
+        { word: "explain", meaning: "解釋" },
+        { word: "factor", meaning: "因素" },
+        { word: "feeling", meaning: "感覺" },
+        { word: "figure", meaning: "數字、人物" },
+        { word: "finance", meaning: "財務" },
+        { word: "focus", meaning: "焦點" },
+        { word: "foreign", meaning: "外國的" },
+        { word: "forest", meaning: "森林" },
+        { word: "form", meaning: "形式" },
+        { word: "future", meaning: "未來" },
+        { word: "garden", meaning: "花園" },
+        { word: "global", meaning: "全球的" },
+        { word: "grateful", meaning: "感激的" },
+        { word: "guide", meaning: "導覽" },
+        { word: "health", meaning: "健康" },
+        { word: "history", meaning: "歷史" },
+        { word: "honest", meaning: "誠實的" },
+        { word: "imagine", meaning: "想像" },
+        { word: "impact", meaning: "影響" },
+        { word: "improve", meaning: "改善" },
+        { word: "income", meaning: "收入" },
+        { word: "indicate", meaning: "顯示" },
+        { word: "industry", meaning: "產業" },
+        { word: "inform", meaning: "通知" },
+        { word: "injure", meaning: "受傷" },
+        { word: "inside", meaning: "內部" },
+        { word: "intense", meaning: "強烈的" },
+        { word: "invest", meaning: "投資" },
+        { word: "issue", meaning: "議題" },
+        { word: "judge", meaning: "判斷" },
+        { word: "labor", meaning: "勞工" },
+        { word: "language", meaning: "語言" },
+        { word: "launch", meaning: "推出" },
+        { word: "lawyer", meaning: "律師" },
+        { word: "leader", meaning: "領導者" },
+        { word: "learn", meaning: "學習" },
+        { word: "legal", meaning: "合法的" },
+        { word: "lesson", meaning: "課程" },
+        { word: "letter", meaning: "信件" },
+        { word: "level", meaning: "程度" }
+      ];
+    }
+
+    function shuffle(array) {
+      const arr = [...array];
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    (async function init() {
+      countdownEl.textContent = formatTime(timeLeft);
+      nextBtn.disabled = true;
+      await initializeQuiz();
+    })();
+  </script>
+</body>
+</html>
