@@ -313,6 +313,32 @@
       line-height: 1.7;
     }
 
+    .portfolio-home {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      margin-bottom: 16px;
+      padding: 8px 13px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--panel);
+      color: var(--primary);
+      font-size: 0.85rem;
+      font-weight: 800;
+      text-decoration: none;
+      transition: background 0.2s ease, transform 0.2s ease;
+    }
+
+    .portfolio-home:hover {
+      transform: translateY(-1px);
+      background: #edf3ff;
+    }
+
+    .portfolio-home:focus-visible {
+      outline: 3px solid var(--accent);
+      outline-offset: 3px;
+    }
+
     @media (max-width: 720px) {
       .topbar {
         justify-content: center;
@@ -340,6 +366,7 @@
 </head>
 <body>
   <div class="page">
+    <a class="portfolio-home" href="../index.html">← 作品集首頁</a>
     <div class="topbar">
       <div class="title-wrap">
         <h1>英文單字測驗</h1>

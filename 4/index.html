@@ -274,6 +274,32 @@
       text-align: center;
     }
 
+    .portfolio-home {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      margin-bottom: 18px;
+      padding: 8px 13px;
+      border: 1px solid #d8dfd3;
+      border-radius: 999px;
+      background: rgba(255, 254, 250, 0.8);
+      color: var(--green);
+      font-size: 0.85rem;
+      font-weight: 800;
+      text-decoration: none;
+      transition: background 150ms ease, transform 150ms ease;
+    }
+
+    .portfolio-home:hover {
+      transform: translateY(-1px);
+      background: #eaf0e4;
+    }
+
+    .portfolio-home:focus-visible {
+      outline: 3px solid var(--orange);
+      outline-offset: 3px;
+    }
+
     @media (max-width: 600px) {
       .page {
         width: min(100% - 24px, 1000px);
@@ -304,6 +330,7 @@
 </head>
 <body>
   <main class="page">
+    <a class="portfolio-home" href="../index.html">← 作品集首頁</a>
     <header class="topbar">
       <div class="brand"><span class="brand-icon" aria-hidden="true">↗</span> 小小跳躍家</div>
       <div class="author">作者：林霆宇</div>

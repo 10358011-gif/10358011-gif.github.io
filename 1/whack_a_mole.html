@@ -368,6 +368,32 @@
             color: #ffeb3b;
         }
 
+        .portfolio-home {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            margin-bottom: 22px;
+            padding: 9px 14px;
+            border: 1px solid rgba(255, 255, 255, 0.35);
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.12);
+            color: #fff;
+            font-size: 14px;
+            font-weight: bold;
+            text-decoration: none;
+            transition: background 0.2s, transform 0.2s;
+        }
+
+        .portfolio-home:hover {
+            transform: translateY(-2px);
+            background: rgba(255, 255, 255, 0.22);
+        }
+
+        .portfolio-home:focus-visible {
+            outline: 3px solid #ffeb3b;
+            outline-offset: 3px;
+        }
+
         @media (max-width: 600px) {
             .container {
                 padding: 20px;
@@ -408,6 +434,7 @@
 </head>
 <body>
     <div class="container">
+        <a class="portfolio-home" href="../index.html">← 作品集首頁</a>
         <div class="header">
             <div class="title">🔨 打地鼠遊戲 🔨</div>
             <div class="subtitle">快速點擊地鼠，獲得最高分！</div>
