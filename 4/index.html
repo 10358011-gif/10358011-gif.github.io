@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f6f3eb">
+  <meta name="description" content="幫助火柴人跳過障礙，看看你能跑多遠！">
+  <title>火柴人跑跑 — 跳躍挑戰</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #26332e;
+      --muted: #78817a;
+      --paper: #f6f3eb;
+      --card: #fffefa;
+      --line: #e7e2d7;
+      --green: #52745c;
+      --orange: #e77d50;
+      --shadow: 0 24px 70px rgba(48, 57, 48, 0.12);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      min-width: 320px;
+      min-height: 100vh;
+      margin: 0;
+      color: var(--ink);
+      background-color: var(--paper);
+      background-image: radial-gradient(#d9d4c8 0.75px, transparent 0.75px);
+      background-size: 19px 19px;
+      font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+    }
+
+    button { font: inherit; }
+
+    .page {
+      width: min(100% - 40px, 1000px);
+      margin: 0 auto;
+      padding: 28px 0 36px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 20px;
+      margin-bottom: 48px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      color: var(--ink);
+      font-size: 0.92rem;
+      font-weight: 850;
+      letter-spacing: 0.04em;
+    }
+
+    .brand-icon {
+      display: grid;
+      width: 36px;
+      height: 36px;
+      place-items: center;
+      border: 1px solid #d5ddcf;
+      border-radius: 12px;
+      background: #eaf0e4;
+      color: var(--green);
+      font-size: 1.15rem;
+    }
+
+    .author {
+      padding: 9px 14px;
+      border: 1px solid #d8dfd3;
+      border-radius: 999px;
+      background: rgba(255, 254, 250, 0.8);
+      color: var(--green);
+      font-size: 0.83rem;
+      font-weight: 800;
+    }
+
+    .intro {
+      margin: 0 auto 28px;
+      text-align: center;
+    }
+
+    .eyebrow {
+      margin: 0 0 10px;
+      color: var(--green);
+      font-size: 0.77rem;
+      font-weight: 850;
+      letter-spacing: 0.17em;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      font-weight: 900;
+      letter-spacing: -0.055em;
+      line-height: 1.15;
+    }
+
+    h1 span { color: var(--orange); }
+
+    .subtitle {
+      margin: 12px 0 0;
+      color: var(--muted);
+      font-size: 0.98rem;
+    }
+
+    .game-card {
+      overflow: hidden;
+      border: 1px solid rgba(222, 218, 207, 0.9);
+      border-radius: 22px;
+      background: var(--card);
+      box-shadow: var(--shadow);
+    }
+
+    .hud {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      min-height: 76px;
+      padding: 15px 26px;
+      border-bottom: 1px solid #efede6;
+    }
+
+    .hud-label {
+      display: block;
+      margin-bottom: 2px;
+      color: var(--muted);
+      font-size: 0.69rem;
+      font-weight: 800;
+      letter-spacing: 0.13em;
+    }
+
+    .score {
+      font-variant-numeric: tabular-nums;
+      font-size: 1.45rem;
+      font-weight: 900;
+      letter-spacing: 0.03em;
+    }
+
+    .best-score {
+      color: var(--green);
+      text-align: right;
+    }
+
+    .game-area {
+      position: relative;
+      overflow: hidden;
+      background: #f8f6ef;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: auto;
+      aspect-ratio: 960 / 360;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    .game-overlay {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 18px;
+      background: rgba(248, 246, 239, 0.48);
+      text-align: center;
+    }
+
+    .game-overlay[hidden] { display: none; }
+
+    .overlay-card {
+      width: min(100%, 350px);
+      padding: 23px 24px 21px;
+      border: 1px solid rgba(231, 226, 215, 0.95);
+      border-radius: 18px;
+      background: rgba(255, 254, 250, 0.96);
+      box-shadow: 0 14px 40px rgba(48, 57, 48, 0.12);
+    }
+
+    .overlay-emoji {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 2rem;
+    }
+
+    .overlay-card h2 {
+      margin: 0;
+      font-size: 1.35rem;
+      font-weight: 900;
+    }
+
+    .overlay-card p {
+      margin: 7px 0 16px;
+      color: var(--muted);
+      font-size: 0.88rem;
+      line-height: 1.6;
+    }
+
+    .action-button {
+      min-height: 45px;
+      padding: 0 23px;
+      border: 0;
+      border-radius: 999px;
+      background: var(--green);
+      color: white;
+      cursor: pointer;
+      font-weight: 850;
+      transition: background 150ms ease, transform 150ms ease;
+    }
+
+    .action-button:hover {
+      transform: translateY(-1px);
+      background: #405f49;
+    }
+
+    .action-button:focus-visible,
+    .jump-button:focus-visible {
+      outline: 3px solid #e8a277;
+      outline-offset: 3px;
+    }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 18px 20px;
+    }
+
+    .key-hint {
+      color: var(--muted);
+      font-size: 0.84rem;
+    }
+
+    kbd {
+      display: inline-block;
+      min-width: 31px;
+      margin: 0 2px;
+      padding: 4px 8px;
+      border: 1px solid #e3dfd5;
+      border-bottom-width: 2px;
+      border-radius: 7px;
+      background: #fffefa;
+      color: var(--ink);
+      font-family: inherit;
+      font-size: 0.76rem;
+      font-weight: 800;
+      text-align: center;
+    }
+
+    .jump-button {
+      display: none;
+      min-height: 42px;
+      padding: 0 18px;
+      border: 1px solid #d8dfd3;
+      border-radius: 999px;
+      background: #eaf0e4;
+      color: var(--green);
+      cursor: pointer;
+      font-weight: 850;
+    }
+
+    .footer-note {
+      margin: 20px 0 0;
+      color: #858b82;
+      font-size: 0.78rem;
+      text-align: center;
+    }
+
+    @media (max-width: 600px) {
+      .page {
+        width: min(100% - 24px, 1000px);
+        padding-top: 18px;
+      }
+
+      .topbar { margin-bottom: 36px; }
+      .brand { font-size: 0.82rem; }
+      .author { padding: 8px 11px; font-size: 0.77rem; }
+      .intro { margin-bottom: 22px; }
+      .subtitle { font-size: 0.88rem; }
+      .game-card { border-radius: 17px; }
+      .hud { min-height: 65px; padding: 12px 17px; }
+      .score { font-size: 1.25rem; }
+      .controls { gap: 8px; padding: 14px 10px; }
+      .key-hint { font-size: 0.75rem; }
+      .jump-button { display: inline-block; }
+      .footer-note { margin-top: 16px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="topbar">
+      <div class="brand"><span class="brand-icon" aria-hidden="true">↗</span> 小小跳躍家</div>
+      <div class="author">作者：林霆宇</div>
+    </header>
+
+    <section class="intro" aria-labelledby="game-title">
+      <p class="eyebrow">READY, SET, JUMP!</p>
+      <h1 id="game-title">火柴人<span>跑跑</span></h1>
+      <p class="subtitle">看準時機跳過障礙，挑戰你的最高紀錄！</p>
+    </section>
+
+    <section class="game-card" aria-label="火柴人跳躍遊戲">
+      <div class="hud" aria-live="polite">
+        <div>
+          <span class="hud-label">DISTANCE</span>
+          <span class="score" id="score">00000</span>
+        </div>
+        <div class="best-score">
+          <span class="hud-label">BEST</span>
+          <span class="score" id="best-score">00000</span>
+        </div>
+      </div>
+      <div class="game-area">
+        <canvas id="game" width="960" height="360" aria-label="火柴人跑步遊戲畫面，點擊畫面即可跳躍"></canvas>
+        <div class="game-overlay" id="overlay">
+          <div class="overlay-card">
+            <span class="overlay-emoji" id="overlay-emoji" aria-hidden="true">🏃</span>
+            <h2 id="overlay-title">準備好了嗎？</h2>
+            <p id="overlay-message">按下開始，幫火柴人跳過路上的障礙！</p>
+            <button class="action-button" id="action-button" type="button">開始遊戲</button>
+          </div>
+        </div>
+      </div>
+      <div class="controls">
+        <span class="key-hint"><kbd>Space</kbd> 或 <kbd>↑</kbd> 跳躍</span>
+        <button class="jump-button" id="jump-button" type="button">跳一下 ↗</button>
+      </div>
+    </section>
+    <p class="footer-note">障礙越來越快，抓準時機就能跑得更遠。</p>
+  </main>
+
+  <script>
+    (() => {
+      const canvas = document.querySelector("#game");
+      const ctx = canvas.getContext("2d");
+      const overlay = document.querySelector("#overlay");
+      const overlayEmoji = document.querySelector("#overlay-emoji");
+      const overlayTitle = document.querySelector("#overlay-title");
+      const overlayMessage = document.querySelector("#overlay-message");
+      const actionButton = document.querySelector("#action-button");
+      const scoreDisplay = document.querySelector("#score");
+      const bestDisplay = document.querySelector("#best-score");
+      const jumpButton = document.querySelector("#jump-button");
+
+      const width = canvas.width;
+      const height = canvas.height;
+      const groundY = 292;
+      const runnerX = 125;
+      const runner = { y: groundY, velocityY: 0, onGround: true };
+      const obstacles = [];
+      const clouds = [
+        { x: 110, y: 76, size: 1 },
+        { x: 490, y: 121, size: 0.75 },
+        { x: 810, y: 69, size: 0.9 }
+      ];
+
+      let state = "ready";
+      let distance = 0;
+      let best = 0;
+      let speed = 340;
+      let obstacleTimer = 1.25;
+      let groundOffset = 0;
+      let elapsed = 0;
+      let lastTime = 0;
+      let animationFrame = 0;
+
+      const formattedScore = value => String(value).padStart(5, "0");
+
+      function showOverlay(emoji, title, message, buttonText) {
+        overlayEmoji.textContent = emoji;
+        overlayTitle.textContent = title;
+        overlayMessage.textContent = message;
+        actionButton.textContent = buttonText;
+        overlay.hidden = false;
+      }
+
+      function startGame() {
+        distance = 0;
+        speed = 340;
+        obstacleTimer = 1.2;
+        groundOffset = 0;
+        elapsed = 0;
+        runner.y = groundY;
+        runner.velocityY = 0;
+        runner.onGround = true;
+        obstacles.length = 0;
+        scoreDisplay.textContent = formattedScore(0);
+        state = "running";
+        overlay.hidden = true;
+        lastTime = performance.now();
+        cancelAnimationFrame(animationFrame);
+        animationFrame = requestAnimationFrame(frame);
+      }
+
+      function jump() {
+        if (state !== "running" || !runner.onGround) return;
+        runner.velocityY = -700;
+        runner.onGround = false;
+      }
+
+      function handleAction() {
+        if (state === "running") {
+          jump();
+        } else {
+          startGame();
+        }
+      }
+
+      function addObstacle() {
+        const tall = Math.random() > 0.46;
+        const obstacle = tall
+          ? { x: width + 30, width: 30, height: 50 + Math.random() * 18, type: "cactus" }
+          : { x: width + 30, width: 46, height: 34, type: "rock" };
+        obstacles.push(obstacle);
+        obstacleTimer = 1.05 + Math.random() * 0.65 + Math.min(distance / 1800, 0.18);
+      }
+
+      function drawCloud(x, y, scale) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.scale(scale, scale);
+        ctx.fillStyle = "rgba(255, 255, 255, 0.78)";
+        ctx.beginPath();
+        ctx.arc(0, 12, 19, 0, Math.PI * 2);
+        ctx.arc(21, 4, 25, 0, Math.PI * 2);
+        ctx.arc(49, 13, 17, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      function drawBackground() {
+        ctx.clearRect(0, 0, width, height);
+        ctx.fillStyle = "#f8f6ef";
+        ctx.fillRect(0, 0, width, height);
+
+        ctx.fillStyle = "#edf0e5";
+        ctx.beginPath();
+        ctx.moveTo(0, 220);
+        ctx.quadraticCurveTo(120, 166, 257, 218);
+        ctx.quadraticCurveTo(380, 165, 530, 220);
+        ctx.quadraticCurveTo(690, 171, 828, 218);
+        ctx.quadraticCurveTo(905, 188, 960, 212);
+        ctx.lineTo(960, groundY);
+        ctx.lineTo(0, groundY);
+        ctx.closePath();
+        ctx.fill();
+
+        clouds.forEach(cloud => drawCloud(cloud.x, cloud.y, cloud.size));
+
+        ctx.fillStyle = "#e5e9dd";
+        ctx.fillRect(0, groundY, width, height - groundY);
+        ctx.strokeStyle = "#75836e";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(0, groundY);
+        ctx.lineTo(width, groundY);
+        ctx.stroke();
+
+        ctx.strokeStyle = "rgba(103, 119, 96, 0.34)";
+        ctx.lineWidth = 2;
+        for (let x = -(groundOffset % 64); x < width; x += 64) {
+          ctx.beginPath();
+          ctx.moveTo(x, groundY + 27);
+          ctx.lineTo(x + 24, groundY + 27);
+          ctx.stroke();
+        }
+
+        ctx.fillStyle = "rgba(112, 132, 103, 0.4)";
+        for (let x = 26 - (groundOffset % 125); x < width; x += 125) {
+          ctx.beginPath();
+          ctx.arc(x, groundY + 52, 2.4, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      function drawRunner() {
+        const running = state === "running" && runner.onGround;
+        const stride = running ? Math.sin(elapsed * 17) : 0;
+        const bob = running ? Math.abs(Math.sin(elapsed * 17)) * 2 : 0;
+        const footY = runner.y - bob;
+
+        ctx.save();
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.strokeStyle = "#293630";
+        ctx.fillStyle = "#f8f6ef";
+        ctx.lineWidth = 5;
+
+        ctx.beginPath();
+        ctx.ellipse(runnerX, groundY + 5, 24, 5, 0, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(46, 60, 49, 0.12)";
+        ctx.fill();
+
+        ctx.strokeStyle = "#293630";
+        ctx.beginPath();
+        ctx.arc(runnerX, footY - 65, 12, 0, Math.PI * 2);
+        ctx.fillStyle = "#fffefa";
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(runnerX, footY - 52);
+        ctx.lineTo(runnerX, footY - 22);
+        ctx.stroke();
+
+        if (!runner.onGround) {
+          ctx.beginPath();
+          ctx.moveTo(runnerX, footY - 43);
+          ctx.lineTo(runnerX - 18, footY - 54);
+          ctx.moveTo(runnerX, footY - 43);
+          ctx.lineTo(runnerX + 17, footY - 57);
+          ctx.moveTo(runnerX, footY - 22);
+          ctx.lineTo(runnerX - 15, footY - 4);
+          ctx.moveTo(runnerX, footY - 22);
+          ctx.lineTo(runnerX + 16, footY - 3);
+        } else {
+          ctx.beginPath();
+          ctx.moveTo(runnerX, footY - 43);
+          ctx.lineTo(runnerX - 15, footY - 31 + stride * 6);
+          ctx.lineTo(runnerX - 21, footY - 40 + stride * 6);
+          ctx.moveTo(runnerX, footY - 43);
+          ctx.lineTo(runnerX + 13, footY - 31 - stride * 6);
+          ctx.lineTo(runnerX + 20, footY - 39 - stride * 6);
+          ctx.moveTo(runnerX, footY - 22);
+          ctx.lineTo(runnerX - 10 + stride * 9, footY - 9);
+          ctx.lineTo(runnerX - 16 + stride * 9, footY - 9);
+          ctx.moveTo(runnerX, footY - 22);
+          ctx.lineTo(runnerX + 10 - stride * 9, footY - 3);
+          ctx.lineTo(runnerX + 17 - stride * 9, footY - 3);
+        }
+        ctx.stroke();
+
+        ctx.fillStyle = "#e77d50";
+        ctx.beginPath();
+        ctx.arc(runnerX + 4, footY - 68, 1.8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      function drawObstacle(obstacle) {
+        const baseY = groundY;
+        ctx.save();
+        ctx.fillStyle = "rgba(46, 60, 49, 0.1)";
+        ctx.beginPath();
+        ctx.ellipse(obstacle.x + obstacle.width / 2, baseY + 4, obstacle.width * 0.67, 4, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (obstacle.type === "cactus") {
+          const top = baseY - obstacle.height;
+          ctx.fillStyle = "#6b8964";
+          ctx.strokeStyle = "#52745c";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.roundRect(obstacle.x + 8, top, 15, obstacle.height, 7);
+          ctx.fill();
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.roundRect(obstacle.x, top + obstacle.height * 0.38, 13, 9, 4);
+          ctx.roundRect(obstacle.x, top + obstacle.height * 0.22, 8, obstacle.height * 0.2, 4);
+          ctx.roundRect(obstacle.x + 19, top + obstacle.height * 0.56, 12, 9, 4);
+          ctx.roundRect(obstacle.x + 23, top + obstacle.height * 0.4, 8, obstacle.height * 0.2, 4);
+          ctx.fill();
+          ctx.stroke();
+        } else {
+          ctx.fillStyle = "#e79a68";
+          ctx.strokeStyle = "#c9794d";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.roundRect(obstacle.x, baseY - obstacle.height, obstacle.width, obstacle.height, 7);
+          ctx.fill();
+          ctx.stroke();
+          ctx.strokeStyle = "rgba(255, 250, 235, 0.65)";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(obstacle.x + 8, baseY - obstacle.height + 11);
+          ctx.lineTo(obstacle.x + obstacle.width - 8, baseY - 10);
+          ctx.moveTo(obstacle.x + obstacle.width - 8, baseY - obstacle.height + 11);
+          ctx.lineTo(obstacle.x + 8, baseY - 10);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      function draw() {
+        drawBackground();
+        obstacles.forEach(drawObstacle);
+        drawRunner();
+      }
+
+      function endGame() {
+        state = "over";
+        distance = Math.floor(distance);
+        best = Math.max(best, distance);
+        bestDisplay.textContent = formattedScore(best);
+        showOverlay("🌱", "哎呀，撞到了！", `這次跑了 ${formattedScore(distance)} 公尺，再試一次吧！`, "再玩一次");
+      }
+
+      function frame(now) {
+        if (state !== "running") return;
+        const delta = Math.min((now - lastTime) / 1000, 0.035);
+        lastTime = now;
+        elapsed += delta;
+        distance += speed * delta / 10;
+        speed = Math.min(340 + distance * 0.8, 610);
+        groundOffset += speed * delta;
+        obstacleTimer -= delta;
+
+        clouds.forEach(cloud => {
+          cloud.x -= speed * delta * 0.12;
+          if (cloud.x < -90) cloud.x = width + 60;
+        });
+
+        if (obstacleTimer <= 0) addObstacle();
+
+        runner.velocityY += 1900 * delta;
+        runner.y += runner.velocityY * delta;
+        if (runner.y >= groundY) {
+          runner.y = groundY;
+          runner.velocityY = 0;
+          runner.onGround = true;
+        }
+
+        for (const obstacle of obstacles) {
+          obstacle.x -= speed * delta;
+          const playerLeft = runnerX - 12;
+          const playerRight = runnerX + 13;
+          const playerTop = runner.y - 77;
+          const playerBottom = runner.y - 2;
+          const obstacleTop = groundY - obstacle.height;
+          if (
+            playerRight > obstacle.x + 4 &&
+            playerLeft < obstacle.x + obstacle.width - 4 &&
+            playerBottom > obstacleTop + 3
+          ) {
+            endGame();
+            break;
+          }
+        }
+
+        while (obstacles.length && obstacles[0].x + obstacles[0].width < -5) {
+          obstacles.shift();
+        }
+
+        const shownScore = Math.floor(distance);
+        scoreDisplay.textContent = formattedScore(shownScore);
+        draw();
+        if (state === "running") animationFrame = requestAnimationFrame(frame);
+      }
+
+      canvas.addEventListener("pointerdown", event => {
+        event.preventDefault();
+        handleAction();
+      });
+
+      jumpButton.addEventListener("click", handleAction);
+      actionButton.addEventListener("click", startGame);
+
+      document.addEventListener("keydown", event => {
+        if (event.code === "Space" || event.code === "ArrowUp") {
+          event.preventDefault();
+          handleAction();
+        } else if (event.code === "Enter" && state !== "running") {
+          startGame();
+        }
+      });
+
+      draw();
+    })();
+  </script>
+</body>
+</html>
