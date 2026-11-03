@@ -148,6 +148,18 @@
       text-align: right;
     }
 
+    .life-status { text-align: center; }
+
+    .life-hearts {
+      display: flex;
+      gap: 4px;
+      color: #e76d67;
+      font-size: 1.15rem;
+      line-height: 1.5;
+    }
+
+    .life-heart.lost { opacity: 0.22; }
+
     .game-area {
       position: relative;
       overflow: hidden;
@@ -355,6 +367,12 @@
     body.dark-theme .portfolio-home:hover { background: #29372d; }
 
     @media (max-width: 600px) {
+      .page, .page * {
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-touch-callout: none;
+      }
+
       .page {
         width: min(100% - 24px, 1000px);
         padding-top: 18px;
@@ -402,6 +420,14 @@
           <span class="hud-label">DISTANCE</span>
           <span class="score" id="score">00000</span>
         </div>
+        <div class="life-status" id="life-display" role="status" aria-label="剩餘生命 3 格">
+          <span class="hud-label">LIVES</span>
+          <span class="life-hearts" aria-hidden="true">
+            <span class="life-heart">♥</span>
+            <span class="life-heart">♥</span>
+            <span class="life-heart">♥</span>
+          </span>
+        </div>
         <div class="best-score">
           <span class="hud-label">BEST</span>
           <span class="score" id="best-score">00000</span>
@@ -437,11 +463,14 @@
       const actionButton = document.querySelector("#action-button");
       const scoreDisplay = document.querySelector("#score");
       const bestDisplay = document.querySelector("#best-score");
+      const lifeDisplay = document.querySelector("#life-display");
+      const lifeHearts = [...document.querySelectorAll(".life-heart")];
       const jumpButton = document.querySelector("#jump-button");
       const themeColor = document.querySelector('meta[name="theme-color"]');
 
       const width = canvas.width;
       const height = canvas.height;
+      const maxLives = 3;
       const groundY = 292;
       const runnerX = 125;
       const darkThemeScoreThreshold = 2000;
@@ -457,6 +486,7 @@
       let state = "ready";
       let distance = 0;
       let best = 0;
+      let lives = maxLives;
       let speed = 340;
       let obstacleTimer = 1.25;
       let groundOffset = 0;
@@ -464,8 +494,42 @@
       let lastTime = 0;
       let animationFrame = 0;
       let darkTheme = false;
+      let audioContext;
 
       const formattedScore = value => String(value).padStart(5, "0");
+
+      function playSound(type) {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextClass) return;
+
+        audioContext ??= new AudioContextClass();
+        if (audioContext.state === "suspended") {
+          void audioContext.resume().catch(error => console.error("無法啟用遊戲音效：", error));
+        }
+
+        const now = audioContext.currentTime;
+        const oscillator = audioContext.createOscillator();
+        const volume = audioContext.createGain();
+        const isHit = type === "hit";
+        const duration = isHit ? 0.24 : 0.13;
+        oscillator.type = isHit ? "sawtooth" : "triangle";
+        oscillator.frequency.setValueAtTime(isHit ? 190 : 520, now);
+        oscillator.frequency.exponentialRampToValueAtTime(isHit ? 75 : 820, now + duration);
+        volume.gain.setValueAtTime(0.0001, now);
+        volume.gain.exponentialRampToValueAtTime(isHit ? 0.16 : 0.09, now + 0.015);
+        volume.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+        oscillator.connect(volume);
+        volume.connect(audioContext.destination);
+        oscillator.start(now);
+        oscillator.stop(now + duration);
+      }
+
+      function updateLives() {
+        lifeHearts.forEach((heart, index) => {
+          heart.classList.toggle("lost", index >= lives);
+        });
+        lifeDisplay.setAttribute("aria-label", `剩餘生命 ${lives} 格`);
+      }
 
       function setDarkTheme(enabled) {
         darkTheme = enabled;
@@ -483,6 +547,8 @@
 
       function startGame() {
         distance = 0;
+        lives = maxLives;
+        updateLives();
         setDarkTheme(false);
         speed = 340;
         obstacleTimer = 1.2;
@@ -502,6 +568,7 @@
 
       function jump() {
         if (state !== "running" || !runner.onGround) return;
+        playSound("jump");
         runner.velocityY = -700;
         runner.onGround = false;
       }
@@ -718,10 +785,11 @@
 
       function endGame() {
         state = "over";
+        cancelAnimationFrame(animationFrame);
         distance = Math.floor(distance);
         best = Math.max(best, distance);
         bestDisplay.textContent = formattedScore(best);
-        showOverlay("🌱", "哎呀，撞到了！", `這次跑了 ${formattedScore(distance)} 公尺，再試一次吧！`, "再玩一次");
+        showOverlay("🌱", "生命用完了！", `這次跑了 ${formattedScore(distance)} 公尺，再試一次吧！`, "再玩一次");
       }
 
       function frame(now) {
@@ -749,7 +817,8 @@
           runner.onGround = true;
         }
 
-        for (const obstacle of obstacles) {
+        for (let index = 0; index < obstacles.length; index++) {
+          const obstacle = obstacles[index];
           obstacle.x -= speed * delta;
           const playerLeft = runnerX - 12;
           const playerRight = runnerX + 13;
@@ -761,7 +830,11 @@
             playerLeft < obstacle.x + obstacle.width - 4 &&
             playerBottom > obstacleTop + 3
           ) {
-            endGame();
+            lives -= 1;
+            updateLives();
+            playSound("hit");
+            obstacles.splice(index, 1);
+            if (lives === 0) endGame();
             break;
           }
         }
