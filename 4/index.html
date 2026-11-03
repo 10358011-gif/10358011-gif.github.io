@@ -152,6 +152,11 @@
       position: relative;
       overflow: hidden;
       background: #f8f6ef;
+      touch-action: none;
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+      -webkit-tap-highlight-color: transparent;
     }
 
     canvas {
@@ -160,7 +165,7 @@
       height: auto;
       aspect-ratio: 960 / 360;
       cursor: pointer;
-      touch-action: manipulation;
+      touch-action: none;
     }
 
     .game-overlay {
@@ -774,9 +779,10 @@
         if (state === "running") animationFrame = requestAnimationFrame(frame);
       }
 
-      canvas.addEventListener("pointerdown", event => {
+      document.querySelector(".game-area").addEventListener("pointerdown", event => {
+        if (state !== "running" || event.target.closest("button")) return;
         event.preventDefault();
-        handleAction();
+        jump();
       });
 
       jumpButton.addEventListener("click", handleAction);
