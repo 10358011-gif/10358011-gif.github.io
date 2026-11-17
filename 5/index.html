@@ -66,6 +66,50 @@
       color: var(--muted);
     }
 
+    .connection-form {
+      display: grid;
+      gap: 10px;
+      margin: 0 0 24px;
+      text-align: left;
+    }
+
+    .connection-form[hidden] { display: none; }
+
+    .connection-form label {
+      font-size: 0.9rem;
+      font-weight: 750;
+    }
+
+    .connection-controls {
+      display: flex;
+      gap: 8px;
+    }
+
+    .connection-controls input {
+      width: 100%;
+      min-width: 0;
+      padding: 0 12px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      color: var(--ink);
+      font: inherit;
+      font-size: 0.9rem;
+    }
+
+    .connection-controls input:focus-visible {
+      outline: 3px solid #e8a277;
+      outline-offset: 2px;
+    }
+
+    .connect-button {
+      flex: 0 0 auto;
+      min-height: 44px;
+      padding: 0 14px;
+      background: var(--ink);
+      color: var(--white);
+      font-size: 0.9rem;
+    }
+
     .count {
       display: block;
       overflow-wrap: anywhere;
@@ -135,6 +179,13 @@
     <p class="eyebrow">SIMPLE COUNTER</p>
     <h1>網頁計數器</h1>
     <p class="description">使用下方按鈕增減並儲存計數</p>
+    <form class="connection-form" id="connection-form" hidden>
+      <label for="gas-url">GAS 網頁應用程式網址（結尾為 /exec）</label>
+      <div class="connection-controls">
+        <input id="gas-url" type="url" inputmode="url" placeholder="https://script.google.com/macros/s/.../exec" required>
+        <button class="connect-button" id="connect" type="submit">連線</button>
+      </div>
+    </form>
     <output class="count" id="count" aria-live="polite">—</output>
     <div class="controls" aria-label="計數器操作">
       <button class="change-button" id="decrement" type="button" aria-label="減一">−</button>
@@ -150,9 +201,15 @@
       const status = document.querySelector("#status");
       const buttons = [...document.querySelectorAll("button")];
       const decrementButton = document.querySelector("#decrement");
+      const connectButton = document.querySelector("#connect");
+      const connectionForm = document.querySelector("#connection-form");
+      const gasUrlInput = document.querySelector("#gas-url");
       const formatter = new Intl.NumberFormat("zh-TW");
+      const gasRunner = typeof google !== "undefined" && google.script && google.script.run;
       let busy = false;
+      let connected = false;
       let count = 0;
+      let backendUrl = "";
 
       function showCount(value) {
         count = value;
@@ -163,7 +220,9 @@
       function setBusy(value) {
         busy = value;
         buttons.forEach(button => {
-          button.disabled = value || (button === decrementButton && count === 0);
+          button.disabled = value ||
+            (!connected && button !== connectButton) ||
+            (button === decrementButton && count === 0);
         });
       }
 
@@ -175,19 +234,125 @@
         status.classList.add("error");
       }
 
+      function callBackend(action, onSuccess, onFailure) {
+        if (gasRunner) {
+          gasRunner
+            .withSuccessHandler(value => {
+              if (!Number.isSafeInteger(value) || value < 0) {
+                onFailure(new Error("GAS 回傳了無效的計數資料。"));
+                return;
+              }
+              onSuccess(value);
+            })
+            .withFailureHandler(onFailure)[action]();
+          return;
+        }
+
+        if (!backendUrl) {
+          onFailure(new Error("請先輸入 GAS 網頁應用程式網址並連線。"));
+          return;
+        }
+
+        const callbackName = `gasCounterCallback_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+        const script = document.createElement("script");
+        const endpoint = new URL(backendUrl);
+        endpoint.searchParams.set("action", action);
+        endpoint.searchParams.set("callback", callbackName);
+        endpoint.searchParams.set("_", String(Date.now()));
+
+        let timeout;
+        const cleanup = () => {
+          clearTimeout(timeout);
+          delete window[callbackName];
+          script.remove();
+        };
+
+        window[callbackName] = response => {
+          cleanup();
+          if (!response || response.error) {
+            onFailure(new Error(response && response.error
+              ? response.error
+              : "GAS 回傳了無效的資料。"));
+          } else if (!Number.isSafeInteger(response.value) || response.value < 0) {
+            onFailure(new Error("GAS 回傳了無效的計數資料。"));
+          } else {
+            onSuccess(response.value);
+          }
+        };
+        script.onerror = () => {
+          cleanup();
+          onFailure(new Error("無法連線到 GAS，請確認網址、部署版本與存取權設定。"));
+        };
+        timeout = setTimeout(() => {
+          cleanup();
+          onFailure(new Error("GAS 連線逾時，請稍後再試。"));
+        }, 15000);
+        script.src = endpoint.toString();
+        document.head.append(script);
+      }
+
+      function normalizeBackendUrl(value) {
+        const url = new URL(value.trim());
+        if (
+          url.protocol !== "https:" ||
+          url.hostname !== "script.google.com" ||
+          !url.pathname.includes("/macros/") ||
+          !url.pathname.endsWith("/exec")
+        ) {
+          throw new Error("請使用 Google Apps Script 部署後提供的 https://script.google.com/.../exec 網址。");
+        }
+
+        url.search = "";
+        url.hash = "";
+        return url.toString();
+      }
+
+      function connectToBackend(url) {
+        backendUrl = url;
+        connected = false;
+        setBusy(true);
+        status.classList.remove("error");
+        status.textContent = "正在連線至 GAS…";
+
+        callBackend("getCount", value => {
+          connected = true;
+          showCount(value);
+          setBusy(false);
+          try {
+            localStorage.setItem("gasCounterWebAppUrl", url);
+          } catch {
+            status.textContent = "已連線；瀏覽器未能記住網址，下次開啟時需重新輸入。";
+            return;
+          }
+          status.textContent = "已連線，計數已載入。";
+        }, showError);
+      }
+
+      connectionForm.addEventListener("submit", event => {
+        event.preventDefault();
+        let url;
+        try {
+          url = normalizeBackendUrl(gasUrlInput.value);
+        } catch (error) {
+          showError(error);
+          return;
+        }
+
+        gasUrlInput.value = url;
+        connectToBackend(url);
+      });
+
       function runAction(action, successMessage) {
         if (busy) return;
         setBusy(true);
         status.classList.remove("error");
         status.textContent = "正在更新…";
 
-        google.script.run
-          .withSuccessHandler(value => {
-            showCount(value);
-            setBusy(false);
-            status.textContent = successMessage;
-          })
-          .withFailureHandler(showError)[action]();
+        callBackend(action, value => {
+          showCount(value);
+          setBusy(false);
+          status.textContent = successMessage;
+        }, showError);
       }
 
       document.querySelector("#increment").addEventListener("click", () => {
@@ -203,14 +368,29 @@
       });
 
       setBusy(true);
-      google.script.run
-        .withSuccessHandler(value => {
+      if (gasRunner) {
+        callBackend("getCount", value => {
+          connected = true;
           showCount(value);
           setBusy(false);
           status.textContent = "計數已載入。";
-        })
-        .withFailureHandler(showError)
-        .getCount();
+        }, showError);
+      } else {
+        connectionForm.hidden = false;
+        try {
+          const savedUrl = localStorage.getItem("gasCounterWebAppUrl");
+          if (savedUrl) {
+            const url = normalizeBackendUrl(savedUrl);
+            gasUrlInput.value = url;
+            connectToBackend(url);
+          } else {
+            setBusy(false);
+            status.textContent = "請輸入 GAS 網頁應用程式網址，連線後即可載入共用計數。";
+          }
+        } catch (error) {
+          showError(error);
+        }
+      }
     })();
   </script>
 </body>
