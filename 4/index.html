@@ -389,6 +389,7 @@
       .controls { gap: 8px; padding: 14px 10px; }
       .key-hint { font-size: 0.75rem; }
       .jump-button { display: inline-block; }
+      .restart-key-hint { display: none; }
       .footer-note { margin-top: 16px; }
     }
 
@@ -411,7 +412,7 @@
     <section class="intro" aria-labelledby="game-title">
       <p class="eyebrow">READY, SET, JUMP!</p>
       <h1 id="game-title">火柴人<span>跑跑</span></h1>
-      <p class="subtitle">看準時機跳過障礙，挑戰你的最高紀錄！</p>
+      <p class="subtitle">左右移動並跳躍，避開障礙，挑戰你的最高紀錄！</p>
     </section>
 
     <section class="game-card" aria-label="火柴人跳躍遊戲">
@@ -434,22 +435,24 @@
         </div>
       </div>
       <div class="game-area">
-        <canvas id="game" width="960" height="360" aria-label="火柴人跑步遊戲畫面，點擊畫面即可跳躍"></canvas>
+        <canvas id="game" width="960" height="360" aria-label="火柴人遊戲畫面，可左右移動並跳躍避開障礙"></canvas>
         <div class="game-overlay" id="overlay">
           <div class="overlay-card">
             <span class="overlay-emoji" id="overlay-emoji" aria-hidden="true">🏃</span>
             <h2 id="overlay-title">準備好了嗎？</h2>
-            <p id="overlay-message">按下開始，幫火柴人跳過路上的障礙！</p>
+            <p id="overlay-message">使用 ← → 或 A / D 移動，按 Space 或 ↑ 跳躍避開障礙！</p>
             <button class="action-button" id="action-button" type="button">開始遊戲</button>
           </div>
         </div>
       </div>
       <div class="controls">
+        <span class="key-hint"><kbd>←</kbd> <kbd>→</kbd> 或 <kbd>A</kbd> <kbd>D</kbd> 移動</span>
         <span class="key-hint"><kbd>Space</kbd> 或 <kbd>↑</kbd> 跳躍</span>
+        <span class="key-hint restart-key-hint"><kbd>R</kbd> 重新開始</span>
         <button class="jump-button" id="jump-button" type="button">跳一下 ↗</button>
       </div>
     </section>
-    <p class="footer-note">障礙越來越快，抓準時機就能跑得更遠。</p>
+    <p class="footer-note">場景與障礙固定不動，靈活移動、跳躍來避開障礙。</p>
   </main>
 
   <script>
@@ -472,11 +475,13 @@
       const height = canvas.height;
       const maxLives = 3;
       const groundY = 292;
-      const runnerX = 125;
+      const moveSpeed = 300;
+      const runnerRadius = 24;
       const darkThemeScoreThreshold = 2000;
       const runAnimationFrequency = 8.5;
-      const runner = { y: groundY, velocityY: 0, onGround: true };
+      const runner = { x: 125, y: groundY, velocityY: 0, onGround: true };
       const obstacles = [];
+      const pressedKeys = new Set();
       const clouds = [
         { x: 110, y: 76, size: 1 },
         { x: 490, y: 121, size: 0.75 },
@@ -487,9 +492,6 @@
       let distance = 0;
       let best = 0;
       let lives = maxLives;
-      let speed = 340;
-      let obstacleTimer = 1.25;
-      let groundOffset = 0;
       let elapsed = 0;
       let lastTime = 0;
       let animationFrame = 0;
@@ -550,14 +552,19 @@
         lives = maxLives;
         updateLives();
         setDarkTheme(false);
-        speed = 340;
-        obstacleTimer = 1.2;
-        groundOffset = 0;
         elapsed = 0;
+        runner.x = 125;
         runner.y = groundY;
         runner.velocityY = 0;
         runner.onGround = true;
         obstacles.length = 0;
+        [280, 420, 560, 700, 840].forEach(x => {
+          const tall = Math.random() > 0.46;
+          obstacles.push(tall
+            ? { x, width: 30, height: 50 + Math.random() * 18, type: "cactus" }
+            : { x, width: 46, height: 34, type: "rock" });
+        });
+        pressedKeys.clear();
         scoreDisplay.textContent = formattedScore(0);
         state = "running";
         overlay.hidden = true;
@@ -579,15 +586,6 @@
         } else {
           startGame();
         }
-      }
-
-      function addObstacle() {
-        const tall = Math.random() > 0.46;
-        const obstacle = tall
-          ? { x: width + 30, width: 30, height: 50 + Math.random() * 18, type: "cactus" }
-          : { x: width + 30, width: 46, height: 34, type: "rock" };
-        obstacles.push(obstacle);
-        obstacleTimer = 1.05 + Math.random() * 0.65 + Math.min(distance / 1800, 0.18);
       }
 
       function drawCloud(x, y, scale) {
@@ -633,7 +631,7 @@
 
         ctx.strokeStyle = darkTheme ? "rgba(150, 170, 145, 0.28)" : "rgba(103, 119, 96, 0.34)";
         ctx.lineWidth = 2;
-        for (let x = -(groundOffset % 64); x < width; x += 64) {
+        for (let x = 0; x < width; x += 64) {
           ctx.beginPath();
           ctx.moveTo(x, groundY + 27);
           ctx.lineTo(x + 24, groundY + 27);
@@ -641,7 +639,7 @@
         }
 
         ctx.fillStyle = darkTheme ? "rgba(160, 180, 145, 0.3)" : "rgba(112, 132, 103, 0.4)";
-        for (let x = 26 - (groundOffset % 125); x < width; x += 125) {
+        for (let x = 26; x < width; x += 125) {
           ctx.beginPath();
           ctx.arc(x, groundY + 52, 2.4, 0, Math.PI * 2);
           ctx.fill();
@@ -649,11 +647,13 @@
       }
 
       function drawRunner() {
-        const running = state === "running" && runner.onGround;
+        const movingLeft = pressedKeys.has("ArrowLeft") || pressedKeys.has("KeyA");
+        const movingRight = pressedKeys.has("ArrowRight") || pressedKeys.has("KeyD");
+        const running = state === "running" && runner.onGround && movingLeft !== movingRight;
         const stride = running ? Math.sin(elapsed * runAnimationFrequency) : 0;
         const bob = running ? Math.abs(Math.sin(elapsed * runAnimationFrequency)) * 2 : 0;
         const footY = runner.y - bob;
-        const centerX = runnerX;
+        const centerX = runner.x;
         const outlineColor = "#000";
         const headFill = darkTheme ? "#333e37" : "#fffefa";
 
@@ -664,7 +664,7 @@
         ctx.lineWidth = 4;
 
         ctx.beginPath();
-        ctx.ellipse(runnerX, groundY + 5, 24, 5, 0, 0, Math.PI * 2);
+        ctx.ellipse(runner.x, groundY + 5, 24, 5, 0, 0, Math.PI * 2);
         ctx.fillStyle = darkTheme ? "rgba(0, 0, 0, 0.3)" : "rgba(46, 60, 49, 0.12)";
         ctx.fill();
 
@@ -789,7 +789,7 @@
         distance = Math.floor(distance);
         best = Math.max(best, distance);
         bestDisplay.textContent = formattedScore(best);
-        showOverlay("🌱", "生命用完了！", `這次跑了 ${formattedScore(distance)} 公尺，再試一次吧！`, "再玩一次");
+        showOverlay("🌱", "生命用完了！", `這次移動了 ${formattedScore(distance)} 公尺，再試一次吧！`, "再玩一次");
       }
 
       function frame(now) {
@@ -797,17 +797,16 @@
         const delta = Math.min((now - lastTime) / 1000, 0.035);
         lastTime = now;
         elapsed += delta;
-        distance += speed * delta / 10;
-        speed = Math.min(340 + distance * 0.8, 610);
-        groundOffset += speed * delta;
-        obstacleTimer -= delta;
 
-        clouds.forEach(cloud => {
-          cloud.x -= speed * delta * 0.12;
-          if (cloud.x < -90) cloud.x = width + 60;
-        });
-
-        if (obstacleTimer <= 0) addObstacle();
+        const movingLeft = pressedKeys.has("ArrowLeft") || pressedKeys.has("KeyA");
+        const movingRight = pressedKeys.has("ArrowRight") || pressedKeys.has("KeyD");
+        const direction = Number(movingRight) - Number(movingLeft);
+        const previousX = runner.x;
+        runner.x = Math.max(
+          runnerRadius,
+          Math.min(width - runnerRadius, runner.x + direction * moveSpeed * delta)
+        );
+        distance += Math.abs(runner.x - previousX) / 10;
 
         runner.velocityY += 1900 * delta;
         runner.y += runner.velocityY * delta;
@@ -819,9 +818,8 @@
 
         for (let index = 0; index < obstacles.length; index++) {
           const obstacle = obstacles[index];
-          obstacle.x -= speed * delta;
-          const playerLeft = runnerX - 12;
-          const playerRight = runnerX + 13;
+          const playerLeft = runner.x - 12;
+          const playerRight = runner.x + 13;
           const playerTop = runner.y - 77;
           const playerBottom = runner.y - 2;
           const obstacleTop = groundY - obstacle.height;
@@ -837,10 +835,6 @@
             if (lives === 0) endGame();
             break;
           }
-        }
-
-        while (obstacles.length && obstacles[0].x + obstacles[0].width < -5) {
-          obstacles.shift();
         }
 
         const shownScore = Math.floor(distance);
@@ -862,12 +856,27 @@
       actionButton.addEventListener("click", startGame);
 
       document.addEventListener("keydown", event => {
-        if (event.code === "Space" || event.code === "ArrowUp") {
+        if (event.code === "KeyR") {
+          if (event.repeat) return;
+          event.preventDefault();
+          startGame();
+        } else if (["ArrowLeft", "ArrowRight", "KeyA", "KeyD"].includes(event.code)) {
+          event.preventDefault();
+          pressedKeys.add(event.code);
+        } else if (event.code === "Space" || event.code === "ArrowUp") {
           event.preventDefault();
           handleAction();
         } else if (event.code === "Enter" && state !== "running") {
           startGame();
         }
+      });
+
+      document.addEventListener("keyup", event => {
+        pressedKeys.delete(event.code);
+      });
+
+      window.addEventListener("blur", () => {
+        pressedKeys.clear();
       });
 
       draw();
