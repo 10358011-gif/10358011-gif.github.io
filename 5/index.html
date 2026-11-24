@@ -82,34 +82,6 @@
       line-height: 1.1;
     }
 
-    .controls {
-      display: flex;
-      justify-content: center;
-      gap: 12px;
-    }
-
-    button {
-      min-height: 50px;
-      padding: 0 20px;
-      border: 1px solid transparent;
-      border-radius: 12px;
-      font: inherit;
-      font-size: 1rem;
-      font-weight: 800;
-      cursor: pointer;
-      transition: transform 150ms ease, background 150ms ease, opacity 150ms ease;
-    }
-
-    button:hover:not(:disabled) { transform: translateY(-2px); }
-    button:focus-visible { outline: 3px solid #e8a277; outline-offset: 3px; }
-    button:disabled { cursor: wait; opacity: 0.55; }
-
-    .reset-button {
-      border-color: var(--line);
-      background: var(--paper);
-      color: var(--ink);
-    }
-
     .status {
       min-height: 1.65em;
       margin: 18px 0 0;
@@ -118,11 +90,6 @@
     }
 
     .status.error { color: #b42318; }
-
-    @media (max-width: 420px) {
-      .controls { gap: 8px; }
-      button { padding: 0 14px; }
-    }
 
     html.compact body {
       display: block;
@@ -148,14 +115,6 @@
       font-size: 2rem;
     }
 
-    html.compact .controls { gap: 7px; }
-
-    html.compact button {
-      min-height: 35px;
-      padding: 0 12px;
-      font-size: 0.82rem;
-    }
-
     html.compact .status {
       min-height: 1.3em;
       margin-top: 4px;
@@ -169,9 +128,6 @@
     <h1>網頁計數器</h1>
     <p class="description">每次開啟網頁時自動增加一次計數</p>
     <output class="count" id="count" aria-live="polite">—</output>
-    <div class="controls" aria-label="計數器管理">
-      <button class="reset-button" id="reset" type="button">重設</button>
-    </div>
     <p class="status" id="status" role="status">正在記錄本次開啟…</p>
   </main>
 
@@ -179,27 +135,15 @@
     (() => {
       const countDisplay = document.querySelector("#count");
       const status = document.querySelector("#status");
-      const buttons = [...document.querySelectorAll("button")];
       const formatter = new Intl.NumberFormat("zh-TW");
       const gasRunner = typeof google !== "undefined" && google.script && google.script.run;
-      let busy = false;
-      let connected = false;
-      let didRecordVisit = false;
       let backendUrl = "https://script.google.com/macros/s/AKfycbx0FP_SFs0CTpcxEA23AnodS8_7m-nsG9zGyycFnLfcwCbG72WScqPEerr5HhWsHUz3/exec";
 
       function showCount(value) {
         countDisplay.textContent = formatter.format(value);
       }
 
-      function setBusy(value) {
-        busy = value;
-        buttons.forEach(button => {
-          button.disabled = value || !connected;
-        });
-      }
-
       function showError(error) {
-        setBusy(false);
         status.textContent = error && error.message
           ? `操作失敗：${error.message}`
           : "操作失敗，請稍後再試。";
@@ -263,53 +207,10 @@
         document.head.append(script);
       }
 
-      function connectToBackend() {
-        connected = false;
-        setBusy(true);
-        status.classList.remove("error");
-        status.textContent = "正在連線至計數服務…";
-
-        const action = didRecordVisit ? "getCount" : "incrementCount";
-        callBackend(action, value => {
-          if (action === "incrementCount") didRecordVisit = true;
-          connected = true;
-          showCount(value);
-          setBusy(false);
-          status.textContent = action === "incrementCount"
-            ? "本次開啟已記錄一次。"
-            : "已連線，計數已載入。";
-        }, showError);
-      }
-
-      function runAction(action, successMessage) {
-        if (busy) return;
-        setBusy(true);
-        status.classList.remove("error");
-        status.textContent = "正在更新…";
-
-        callBackend(action, value => {
-          showCount(value);
-          setBusy(false);
-          status.textContent = successMessage;
-        }, showError);
-      }
-
-      document.querySelector("#reset").addEventListener("click", () => {
-        runAction("resetCount", "計數已重設。");
-      });
-
-      setBusy(true);
-      if (gasRunner) {
-        callBackend("incrementCount", value => {
-          didRecordVisit = true;
-          connected = true;
-          showCount(value);
-          setBusy(false);
-          status.textContent = "本次開啟已記錄一次。";
-        }, showError);
-      } else {
-        connectToBackend();
-      }
+      callBackend("incrementCount", value => {
+        showCount(value);
+        status.textContent = "本次開啟已記錄一次。";
+      }, showError);
     })();
   </script>
 </body>
