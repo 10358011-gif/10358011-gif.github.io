@@ -6,6 +6,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f7f8fc">
   <title>網頁計數器</title>
+  <script>
+    if (new URLSearchParams(location.search).has("compact")) {
+      document.documentElement.classList.add("compact");
+    }
+  </script>
   <style>
     :root {
       color-scheme: light;
@@ -66,50 +71,6 @@
       color: var(--muted);
     }
 
-    .connection-form {
-      display: grid;
-      gap: 10px;
-      margin: 0 0 24px;
-      text-align: left;
-    }
-
-    .connection-form[hidden] { display: none; }
-
-    .connection-form label {
-      font-size: 0.9rem;
-      font-weight: 750;
-    }
-
-    .connection-controls {
-      display: flex;
-      gap: 8px;
-    }
-
-    .connection-controls input {
-      width: 100%;
-      min-width: 0;
-      padding: 0 12px;
-      border: 1px solid var(--line);
-      border-radius: 10px;
-      color: var(--ink);
-      font: inherit;
-      font-size: 0.9rem;
-    }
-
-    .connection-controls input:focus-visible {
-      outline: 3px solid #e8a277;
-      outline-offset: 2px;
-    }
-
-    .connect-button {
-      flex: 0 0 auto;
-      min-height: 44px;
-      padding: 0 14px;
-      background: var(--ink);
-      color: var(--white);
-      font-size: 0.9rem;
-    }
-
     .count {
       display: block;
       overflow-wrap: anywhere;
@@ -143,15 +104,6 @@
     button:focus-visible { outline: 3px solid #e8a277; outline-offset: 3px; }
     button:disabled { cursor: wait; opacity: 0.55; }
 
-    .change-button {
-      min-width: 66px;
-      background: var(--accent);
-      color: var(--white);
-      font-size: 1.4rem;
-    }
-
-    .change-button:hover:not(:disabled) { background: var(--accent-dark); }
-
     .reset-button {
       border-color: var(--line);
       background: var(--paper);
@@ -170,7 +122,44 @@
     @media (max-width: 420px) {
       .controls { gap: 8px; }
       button { padding: 0 14px; }
-      .change-button { min-width: 56px; }
+    }
+
+    html.compact body {
+      display: block;
+      min-width: 0;
+      min-height: 0;
+      padding: 0;
+      background: transparent;
+    }
+
+    html.compact .counter-card {
+      width: 100%;
+      padding: 9px 13px;
+      border-radius: 14px;
+      text-align: left;
+    }
+
+    html.compact .eyebrow { display: none; }
+    html.compact h1 { font-size: 1.15rem; }
+    html.compact .description { display: none; }
+
+    html.compact .count {
+      margin: 3px 0 6px;
+      font-size: 2rem;
+    }
+
+    html.compact .controls { gap: 7px; }
+
+    html.compact button {
+      min-height: 35px;
+      padding: 0 12px;
+      font-size: 0.82rem;
+    }
+
+    html.compact .status {
+      min-height: 1.3em;
+      margin-top: 4px;
+      font-size: 0.72rem;
     }
   </style>
 </head>
@@ -178,21 +167,12 @@
   <main class="counter-card">
     <p class="eyebrow">SIMPLE COUNTER</p>
     <h1>網頁計數器</h1>
-    <p class="description">使用下方按鈕增減並儲存計數</p>
-    <form class="connection-form" id="connection-form" hidden>
-      <label for="gas-url">GAS 網頁應用程式網址（結尾為 /exec）</label>
-      <div class="connection-controls">
-        <input id="gas-url" type="url" inputmode="url" placeholder="https://script.google.com/macros/s/.../exec" required>
-        <button class="connect-button" id="connect" type="submit">連線</button>
-      </div>
-    </form>
+    <p class="description">每次開啟網頁時自動增加一次計數</p>
     <output class="count" id="count" aria-live="polite">—</output>
-    <div class="controls" aria-label="計數器操作">
-      <button class="change-button" id="decrement" type="button" aria-label="減一">−</button>
-      <button class="change-button" id="increment" type="button" aria-label="加一">＋</button>
+    <div class="controls" aria-label="計數器管理">
       <button class="reset-button" id="reset" type="button">重設</button>
     </div>
-    <p class="status" id="status" role="status">正在載入計數…</p>
+    <p class="status" id="status" role="status">正在記錄本次開啟…</p>
   </main>
 
   <script>
@@ -200,29 +180,21 @@
       const countDisplay = document.querySelector("#count");
       const status = document.querySelector("#status");
       const buttons = [...document.querySelectorAll("button")];
-      const decrementButton = document.querySelector("#decrement");
-      const connectButton = document.querySelector("#connect");
-      const connectionForm = document.querySelector("#connection-form");
-      const gasUrlInput = document.querySelector("#gas-url");
       const formatter = new Intl.NumberFormat("zh-TW");
       const gasRunner = typeof google !== "undefined" && google.script && google.script.run;
       let busy = false;
       let connected = false;
-      let count = 0;
-      let backendUrl = "";
+      let didRecordVisit = false;
+      let backendUrl = "https://script.google.com/macros/s/AKfycbx0FP_SFs0CTpcxEA23AnodS8_7m-nsG9zGyycFnLfcwCbG72WScqPEerr5HhWsHUz3/exec";
 
       function showCount(value) {
-        count = value;
         countDisplay.textContent = formatter.format(value);
-        decrementButton.disabled = busy || value === 0;
       }
 
       function setBusy(value) {
         busy = value;
         buttons.forEach(button => {
-          button.disabled = value ||
-            (!connected && button !== connectButton) ||
-            (button === decrementButton && count === 0);
+          button.disabled = value || !connected;
         });
       }
 
@@ -249,7 +221,7 @@
         }
 
         if (!backendUrl) {
-          onFailure(new Error("請先輸入 GAS 網頁應用程式網址並連線。"));
+          onFailure(new Error("計數服務尚未設定網址。"));
           return;
         }
 
@@ -291,56 +263,23 @@
         document.head.append(script);
       }
 
-      function normalizeBackendUrl(value) {
-        const url = new URL(value.trim());
-        if (
-          url.protocol !== "https:" ||
-          url.hostname !== "script.google.com" ||
-          !url.pathname.includes("/macros/") ||
-          !url.pathname.endsWith("/exec")
-        ) {
-          throw new Error("請使用 Google Apps Script 部署後提供的 https://script.google.com/.../exec 網址。");
-        }
-
-        url.search = "";
-        url.hash = "";
-        return url.toString();
-      }
-
-      function connectToBackend(url) {
-        backendUrl = url;
+      function connectToBackend() {
         connected = false;
         setBusy(true);
         status.classList.remove("error");
-        status.textContent = "正在連線至 GAS…";
+        status.textContent = "正在連線至計數服務…";
 
-        callBackend("getCount", value => {
+        const action = didRecordVisit ? "getCount" : "incrementCount";
+        callBackend(action, value => {
+          if (action === "incrementCount") didRecordVisit = true;
           connected = true;
           showCount(value);
           setBusy(false);
-          try {
-            localStorage.setItem("gasCounterWebAppUrl", url);
-          } catch {
-            status.textContent = "已連線；瀏覽器未能記住網址，下次開啟時需重新輸入。";
-            return;
-          }
-          status.textContent = "已連線，計數已載入。";
+          status.textContent = action === "incrementCount"
+            ? "本次開啟已記錄一次。"
+            : "已連線，計數已載入。";
         }, showError);
       }
-
-      connectionForm.addEventListener("submit", event => {
-        event.preventDefault();
-        let url;
-        try {
-          url = normalizeBackendUrl(gasUrlInput.value);
-        } catch (error) {
-          showError(error);
-          return;
-        }
-
-        gasUrlInput.value = url;
-        connectToBackend(url);
-      });
 
       function runAction(action, successMessage) {
         if (busy) return;
@@ -355,41 +294,21 @@
         }, showError);
       }
 
-      document.querySelector("#increment").addEventListener("click", () => {
-        runAction("incrementCount", "已加一。");
-      });
-
-      decrementButton.addEventListener("click", () => {
-        runAction("decrementCount", "已減一。");
-      });
-
       document.querySelector("#reset").addEventListener("click", () => {
         runAction("resetCount", "計數已重設。");
       });
 
       setBusy(true);
       if (gasRunner) {
-        callBackend("getCount", value => {
+        callBackend("incrementCount", value => {
+          didRecordVisit = true;
           connected = true;
           showCount(value);
           setBusy(false);
-          status.textContent = "計數已載入。";
+          status.textContent = "本次開啟已記錄一次。";
         }, showError);
       } else {
-        connectionForm.hidden = false;
-        try {
-          const savedUrl = localStorage.getItem("gasCounterWebAppUrl");
-          if (savedUrl) {
-            const url = normalizeBackendUrl(savedUrl);
-            gasUrlInput.value = url;
-            connectToBackend(url);
-          } else {
-            setBusy(false);
-            status.textContent = "請輸入 GAS 網頁應用程式網址，連線後即可載入共用計數。";
-          }
-        } catch (error) {
-          showError(error);
-        }
+        connectToBackend();
       }
     })();
   </script>

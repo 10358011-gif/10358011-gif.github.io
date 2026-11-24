@@ -69,6 +69,14 @@
       font-weight: 750;
     }
 
+    .counter-embed {
+      display: block;
+      width: 250px;
+      height: 232px;
+      flex: 0 0 auto;
+      border: 0;
+    }
+
     .hero {
       padding: 72px 0 56px;
       text-align: center;
@@ -527,6 +535,8 @@
 
     @media (max-width: 680px) {
       .page { width: min(100% - 32px, 540px); }
+      header { align-items: flex-start; flex-wrap: wrap; }
+      .counter-embed { margin-left: auto; }
       .hero { padding: 54px 0 40px; }
       .works { padding-bottom: 54px; }
       .work-grid { grid-template-columns: 1fr; gap: 15px; }
@@ -555,7 +565,12 @@
   <div class="page">
     <header>
       <a class="brand" href="#top">TING-YU<span>.</span>WORKS</a>
-      <span class="author">林霆宇的作品集</span>
+      <iframe
+        class="counter-embed"
+        src="5/index.html?compact=1"
+        title="網頁計數器"
+        loading="lazy"
+      ></iframe>
     </header>
 
     <main id="top">
